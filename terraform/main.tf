@@ -15,6 +15,10 @@ resource "google_compute_subnetwork" "main" {
   network       = google_compute_network.main.id
 }
 terraform {
+  backend "gcs" {
+    bucket = "geminiapiterraformbucket"
+    prefix = "terraform/state"
+  }
   required_providers {
     google = {
       source  = "hashicorp/google"
