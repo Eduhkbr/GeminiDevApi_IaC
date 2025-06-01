@@ -12,6 +12,7 @@ jobs:
       run:
         working-directory: ./terraform
     env:
+      TF_VAR_db_name: ${{ secrets.DB_NAME }}
       TF_VAR_db_user: ${{ secrets.DB_USER }}
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
@@ -45,8 +46,21 @@ jobs:
         if: github.ref == 'refs/heads/main' && steps.plan.outcome == 'success'
         run: terraform apply -input=false -auto-approve
 
+      - name: Set Env Variables from Terraform Outputs
+        if: steps.apply.outcome == 'success'
+        run: |
+          echo "DB_PRIVATE_IP=$(terraform output -raw db_private_ip_address)" >> $GITHUB_ENV
+          echo "REDIS_HOST=$(terraform output -raw redis_host)" >> $GITHUB_ENV
+
       - name: Terraform Output
         id: output
         if: steps.apply.outcome == 'success'
         run: |
           echo "Cloud Run URL: $(terraform output -raw cloudrun_url)"
+
+      - name: Run SQL init script
+        uses: docker://postgres:15
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f ./init.sql
