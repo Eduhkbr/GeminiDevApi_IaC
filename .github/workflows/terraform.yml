@@ -54,11 +54,12 @@ jobs:
 
       - name: Run SQL init script
         if: steps.apply.outcome == 'success'
-        uses: docker://postgres:15
-        env:
-          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f ./terraform/init.sql
+          docker run --rm \
+            -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
+            -v $(pwd):/workspace \
+            postgres:15 \
+            psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f /workspace/terraform/init.sql
 
       - name: Terraform Output
         id: output
