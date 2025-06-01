@@ -52,15 +52,16 @@ jobs:
           echo "DB_PRIVATE_IP=$(terraform output -raw db_private_ip_address)" >> $GITHUB_ENV
           echo "REDIS_HOST=$(terraform output -raw redis_host)" >> $GITHUB_ENV
 
+      - name: Run SQL init script
+        if: steps.apply.outcome == 'success'
+        uses: docker://postgres:15
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f ./terraform/init.sql
+
       - name: Terraform Output
         id: output
         if: steps.apply.outcome == 'success'
         run: |
           echo "Cloud Run URL: $(terraform output -raw cloudrun_url)"
-
-      - name: Run SQL init script
-        uses: docker://postgres:15
-        env:
-          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f ./init.sql
