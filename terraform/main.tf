@@ -58,12 +58,13 @@ resource "google_redis_instance" "default" {
   memory_size_gb     = 1
   region             = var.gcp_region
   authorized_network = google_compute_network.main.id
+}
+
 resource "google_vpc_access_connector" "connector" {
   name          = "devapi-connector"
   region        = var.gcp_region
   network       = google_compute_network.main.name
   ip_cidr_range = "10.8.0.0/28"
-}
 }
 
 resource "google_cloud_run_service" "default" {
