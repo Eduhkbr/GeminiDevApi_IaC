@@ -84,14 +84,17 @@ jobs:
           export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
           export DB_NAME="${{ secrets.DB_NAME }}"
           export DB_INSTANCE="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${{ secrets.DB_INSTANCE_NAME }}"
+          echo "Testando Cloud SQL Proxy com instancia: $DB_INSTANCE"
           ./cloud-sql-proxy --address 127.0.0.1 --port 5432 --credentials-file='${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' $DB_INSTANCE &
-          sleep 5
+          PROXY_PID=$!
+          sleep 10
+          netstat -an | grep 5432 || (echo 'Proxy não abriu a porta 5432' && kill $PROXY_PID && exit 1)
           docker run --rm \
             -e PGPASSWORD=$DB_PASSWORD \
             -v $(pwd):/workspace \
             postgres:15 \
             psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME -f /workspace/terraform/init.sql
-          kill %1
+          kill $PROXY_PID
 
       - name: Terraform Output
         id: output
