@@ -1,3 +1,17 @@
+resource "google_compute_global_address" "private_ip_range" {
+  name          = "devapi-private-ip-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.main.id
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.main.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_range.name]
+}
+
 resource "google_sql_user" "default" {
   name     = var.db_user
   instance = google_sql_database_instance.default.name
@@ -46,7 +60,7 @@ resource "google_sql_database_instance" "default" {
     tier = "db-f1-micro"
     ip_configuration {
       ipv4_enabled    = false
-      private_network = google_compute_network.main.id
+      private_network = google_compute_network.main.self_link
     }
   }
 }
@@ -61,7 +75,7 @@ resource "google_redis_instance" "default" {
   tier               = "BASIC"
   memory_size_gb     = 1
   region             = var.gcp_region
-  authorized_network = google_compute_network.main.id
+  authorized_network = google_compute_network.main.self_link
 }
 
 resource "google_vpc_access_connector" "connector" {
