@@ -70,14 +70,28 @@ jobs:
           echo "DB_PRIVATE_IP=$(terraform output -raw db_private_ip_address)" >> $GITHUB_ENV
           echo "REDIS_HOST=$(terraform output -raw redis_host)" >> $GITHUB_ENV
 
-      - name: Run SQL init script
+
+      - name: Download Cloud SQL Auth Proxy
         if: steps.apply.outcome == 'success'
         run: |
+          wget -O cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.10.1/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+
+      - name: Run SQL init script via Cloud SQL Proxy
+        if: steps.apply.outcome == 'success'
+        run: |
+          export DB_USER="${{ secrets.DB_USER }}"
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          export DB_NAME="${{ secrets.DB_NAME }}"
+          export DB_INSTANCE="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${{ secrets.DB_INSTANCE_NAME }}"
+          ./cloud-sql-proxy --address 127.0.0.1 --port 5432 --credentials-file='${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' $DB_INSTANCE &
+          sleep 5
           docker run --rm \
-            -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
+            -e PGPASSWORD=$DB_PASSWORD \
             -v $(pwd):/workspace \
             postgres:15 \
-            psql -h $DB_PRIVATE_IP -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -f /workspace/terraform/init.sql
+            psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME -f /workspace/terraform/init.sql
+          kill %1
 
       - name: Terraform Output
         id: output
