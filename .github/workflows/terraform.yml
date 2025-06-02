@@ -86,6 +86,7 @@ jobs:
           export DB_INSTANCE="${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:${{ secrets.DB_INSTANCE_NAME }}"
           echo "Testando Cloud SQL Proxy com instancia: $DB_INSTANCE"
           printf '%s' "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}" > /tmp/gcp-creds.json
+          head -c 10 /tmp/gcp-creds.json
           ./cloud-sql-proxy --address 127.0.0.1 --port 5432 --credentials-file=/tmp/gcp-creds.json $DB_INSTANCE &
           PROXY_PID=$!
           sleep 10
