@@ -17,6 +17,9 @@ jobs:
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
       TF_VAR_image_url: ${{ secrets.IMAGE_URL }}
+      TF_VAR_db_instance_name: ${{ secrets.DB_INSTANCE_NAME }}
+      TF_VAR_redis_instance_name: ${{ secrets.REDIS_INSTANCE_NAME }}
+      TF_VAR_gcp_region: ${{ secrets.GCP_REGION }}
 
     steps:
       - name: Checkout code
@@ -35,6 +38,21 @@ jobs:
       - name: Terraform Init
         id: init
         run: terraform init
+
+      - name: Import existing resources (Cloud SQL + Redis)
+        run: |
+          # Importa a instância do Cloud SQL
+          terraform import google_sql_database_instance.default \
+            projects/${{ secrets.GCP_PROJECT_ID }}/instances/${{ secrets.DB_INSTANCE_NAME }} || true
+
+          # Importa apenas o database dentro da instância
+          terraform import google_sql_database.default \
+            projects/${{ secrets.GCP_PROJECT_ID }}/instances/${{ secrets.DB_INSTANCE_NAME }}/databases/${{ secrets.DB_NAME }} || true
+
+          # Importa a instância do Redis
+          terraform import google_redis_instance.default \
+            projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ secrets.GCP_REGION }}/instances/${{ secrets.REDIS_INSTANCE_NAME }} || true
+        continue-on-error: true
 
       - name: Terraform Plan
         id: plan
