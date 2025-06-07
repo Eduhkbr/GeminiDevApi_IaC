@@ -11,10 +11,10 @@ sudo apt-get install -y grafana
 sudo mkdir -p /etc/grafana/provisioning/datasources /etc/grafana/provisioning/dashboards /var/lib/grafana/dashboards
 
 # Injeta os conteúdos dos arquivos
-cat <<EOF | sudo tee /etc/grafana/provisioning/datasources/prometheus.yml
+cat <<EOF | sudo tee /etc/grafana/provisioning/datasources/prometheus-datasource.yml
 ${prometheus_datasource_yml}
 EOF
-cat <<EOF | sudo tee /etc/grafana/provisioning/dashboards/dashboards.yml
+cat <<EOF | sudo tee /etc/grafana/provisioning/dashboards/dashboard-provider.yml
 ${dashboard_provider_yml}
 EOF
 cat <<EOF | sudo tee /var/lib/grafana/dashboards/api_dashboards.json
