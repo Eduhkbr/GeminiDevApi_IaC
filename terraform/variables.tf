@@ -3,6 +3,12 @@ variable "gcp_project_id" {
   description = "The ID of the GCP project"
 }
 
+variable "gcp_zone" {
+  type        = string
+  description = "The zone for regional resources like GCE VMs"
+  default     = "us-central1-a"
+}
+
 variable "gcp_region" {
   type        = string
   description = "The region to deploy resources in"

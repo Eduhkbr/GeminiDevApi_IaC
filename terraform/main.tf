@@ -1,33 +1,3 @@
-resource "google_compute_global_address" "private_ip_range" {
-  name          = "devapi-private-ip-range"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = 16
-  network       = google_compute_network.main.id
-}
-
-resource "google_service_networking_connection" "private_vpc_connection" {
-  network                 = google_compute_network.main.id
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_ip_range.name]
-}
-
-resource "google_sql_user" "default" {
-  name     = var.db_user
-  instance = google_sql_database_instance.default.name
-  password = var.db_password
-}
-resource "google_compute_network" "main" {
-  name                    = "devapi-vpc"
-  auto_create_subnetworks = false
-}
-
-resource "google_compute_subnetwork" "main" {
-  name          = "devapi-subnet"
-  ip_cidr_range = "10.10.0.0/24"
-  region        = var.gcp_region
-  network       = google_compute_network.main.id
-}
 terraform {
   backend "gcs" {
     bucket = "geminiapiterraformbucket"
@@ -46,90 +16,20 @@ provider "google" {
   region  = var.gcp_region
 }
 
-resource "google_project_service" "cloudsql" {
-  service            = "sqladmin.googleapis.com"
+# Habilita as APIs necessárias para o projeto
+resource "google_project_service" "apis" {
+  for_each = toset([
+    "sqladmin.googleapis.com",
+    "redis.googleapis.com",
+    "vpcaccess.googleapis.com",
+    "run.googleapis.com",
+    "servicenetworking.googleapis.com",
+    "compute.googleapis.com",
+    "monitoring.googleapis.com",
+    "cloudresourcemanager.googleapis.com"
+  ])
+
+  project            = var.gcp_project_id
+  service            = each.key
   disable_on_destroy = false
-}
-
-resource "google_sql_database_instance" "default" {
-  name             = var.db_instance_name
-  region           = var.gcp_region
-  database_version = "POSTGRES_15"
-
-  settings {
-    tier = "db-f1-micro"
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.main.self_link
-    }
-  }
-}
-
-resource "google_sql_database" "default" {
-  name     = var.db_name
-  instance = google_sql_database_instance.default.name
-}
-
-resource "google_redis_instance" "default" {
-  name               = var.redis_instance_name
-  tier               = "BASIC"
-  memory_size_gb     = 1
-  region             = var.gcp_region
-  authorized_network = google_compute_network.main.self_link
-}
-
-resource "google_vpc_access_connector" "connector" {
-  name          = "devapi-connector"
-  region        = var.gcp_region
-  network       = google_compute_network.main.self_link
-  ip_cidr_range = "10.8.0.0/28"
-}
-
-resource "google_cloud_run_service" "default" {
-  name     = var.cloudrun_service_name
-  location = var.gcp_region
-
-  template {
-    metadata {
-      annotations = {
-        "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.id
-        "run.googleapis.com/vpc-access-egress"    = "all-traffic"
-      }
-    }
-    spec {
-      containers {
-        image = var.image_url
-        env {
-          name  = "DEVAPI_DB_URL"
-          value = "jdbc:postgresql://${google_sql_database_instance.default.name}.${var.gcp_region}.cloudsql.com:5432/${var.db_name}"
-        }
-        env {
-          name  = "DEVAPI_DB_USER"
-          value = var.db_user
-        }
-        env {
-          name  = "DEVAPI_DB_PASS"
-          value = var.db_password
-        }
-        env {
-          name  = "REDIS_HOST"
-          value = google_redis_instance.default.host
-        }
-        env {
-          name  = "REDIS_PORT"
-          value = "6379"
-        }
-        env {
-          name  = "REDIS_USER"
-          value = var.db_user
-        }
-        env {
-          name  = "REDIS_PASS"
-          value = var.db_password
-        }
-      }
-    }
-  }
-
-  autogenerate_revision_name = true
 }
