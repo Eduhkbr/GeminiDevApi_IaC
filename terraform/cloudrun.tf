@@ -21,7 +21,7 @@ resource "google_cloud_run_service" "default" {
         }
         env {
           name  = "DEVAPI_DB_URL"
-          value = "jdbc:postgresql:///${google_sql_database.default.name}?cloudSqlInstance=${google_sql_database_instance.default.connection_name}&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
+          value = "jdbc:postgresql:///${var.db_name}?cloudSqlInstance=${google_sql_database_instance.default.connection_name}&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
         }
         env {
           name  = "DEVAPI_DB_USER"
