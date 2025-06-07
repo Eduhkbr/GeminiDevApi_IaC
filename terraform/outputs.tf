@@ -8,3 +8,7 @@ output "redis_host" {
 output "cloudrun_url" {
   value = google_cloud_run_service.default.status[0].url
 }
+output "grafana_url" {
+  description = "URL to access the Grafana dashboard"
+  value       = "http://${google_compute_instance.grafana_vm.network_interface[0].access_config[0].nat_ip}:3000"
+}
