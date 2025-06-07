@@ -18,7 +18,7 @@ cat <<EOF | sudo tee /etc/grafana/provisioning/dashboards/dashboard-provider.yml
 ${dashboard_provider_yml}
 EOF
 cat <<EOF | sudo tee /var/lib/grafana/dashboards/api_dashboards.json
-${api_dashboards_json}
+${api_dashboard_json}
 EOF
 
 # Reinicia o Grafana
