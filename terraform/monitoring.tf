@@ -1,3 +1,13 @@
+
+resource "google_monitoring_workspace" "primary" {
+  project = var.gcp_project_id
+}
+
+resource "google_monitoring_monitored_project" "prometheus_project" {
+  metrics_scope = google_monitoring_workspace.primary.name
+  name          = var.gcp_project_id
+}
+
 resource "google_compute_instance" "grafana_vm" {
   project      = var.gcp_project_id
   zone         = var.gcp_zone
@@ -19,9 +29,10 @@ resource "google_compute_instance" "grafana_vm" {
     }
   }
 
-  # Script que instala e configura o Grafana na inicialização da VM
   metadata_startup_script = <<-EOT
-    #!/bin/bash
+    sleep 10
+    
+    # Instalação do Grafana
     sudo apt-get update
     sudo apt-get install -y apt-transport-https wget
     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
@@ -29,38 +40,36 @@ resource "google_compute_instance" "grafana_vm" {
     sudo apt-get update
     sudo apt-get install -y grafana
 
-    # Provisiona a fonte de dados e o dashboard
+    # Provisionamento da fonte de dados e do dashboard
     sudo mkdir -p /etc/grafana/provisioning/datasources
     sudo mkdir -p /etc/grafana/provisioning/dashboards
     
-    cat <<'EOF' | sudo tee /etc/grafana/provisioning/datasources/prometheus.yml
-    ${file("../grafana/provisioning/datasources/prometheus-datasource.yml")}
-    EOF
+    # Injeção da configuração da fonte de dados
+    cat <<EOF | sudo tee /etc/grafana/provisioning/datasources/prometheus.yml
+${file("../grafana/provisioning/datasources/prometheus-datasource.yml")}
+EOF
     
-    cat <<'EOF' | sudo tee /etc/grafana/provisioning/dashboards/dashboards.yml
-    ${file("../grafana/provisioning/dashboards/dashboard-provider.yml")}
-    EOF
+    # Injeção da configuração do provedor de dashboards
+    cat <<EOF | sudo tee /etc/grafana/provisioning/dashboards/dashboards.yml
+${file("../grafana/provisioning/dashboards/dashboard-provider.yml")}
+EOF
     
+    # Injeção do dashboard JSON
     sudo mkdir -p /var/lib/grafana/dashboards
-    cat <<'EOF' | sudo tee /var/lib/grafana/dashboards/api_dashboard.json
-    ${file("../grafana/dashboards/api_dashboard.json")}
-    EOF
+    cat <<EOF | sudo tee /var/lib/grafana/dashboards/api_dashboard.json
+${file("../grafana/dashboards/api_dashboard.json")}
+EOF
     
+    # Restart do Grafana para aplicar as configurações
     sudo systemctl daemon-reload
     sudo systemctl start grafana-server
     sudo systemctl enable grafana-server.service
   EOT
 
   service_account {
-    # Usa a conta de serviço padrão do GCE, que já tem permissão de viewer do monitoring
     email  = data.google_compute_default_service_account.default.email
     scopes = ["cloud-platform"]
   }
-}
-
-# Configura o projeto para usar o Prometheus Gerenciado
-resource "google_monitoring_monitored_project" "prometheus_project" {
-  project                  = var.gcp_project_id
-  name                     = var.gcp_project_id
-  metric_container_project = var.gcp_project_id
+  
+  depends_on = [google_project_service.apis]
 }
