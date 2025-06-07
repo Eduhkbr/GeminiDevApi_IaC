@@ -18,7 +18,7 @@ resource "google_compute_instance" "grafana_vm" {
   }
 
   metadata_startup_script = templatefile("${path.module}/scripts/install_grafana.sh.tpl", {
-    prometheus_datasource_yml = templatefile("${path.module}/../grafana/provisioning/datasources/prometheus-datasource.yml", { GcpProjectID = var.gcp_project_id })
+    prometheus_datasource_yml = templatefile("${path.module}/../grafana/provisioning/datasources/prometheus-datasource.yml", { GCP_PROJECT_ID = var.gcp_project_id })
     dashboard_provider_yml    = file("${path.module}/../grafana/provisioning/dashboards/dashboard-provider.yml")
     api_dashboard_json        = file("${path.module}/../grafana/dashboards/api_dashboards.json")
   })
